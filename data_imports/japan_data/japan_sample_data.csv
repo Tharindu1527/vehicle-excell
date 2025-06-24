@@ -1,0 +1,7 @@
+make,model,year,final_price_jpy,final_price_gbp,mileage_km,mileage_miles,auction_house,auction_date,grade,fuel_type,transmission,body_type,colour,title,total_landed_cost
+Toyota,Prius,2019,1800000,9900,45000,27961,USS Tokyo,2024-01-15,A,Hybrid,CVT,Hatchback,White,2019 Toyota Prius Hybrid Grade A,13365
+Honda,Fit,2020,1200000,6600,32000,19883,USS Osaka,2024-01-20,B,Hybrid,CVT,Hatchback,Silver,2020 Honda Fit Hybrid Grade B,8910
+Nissan,Note,2018,1500000,8250,58000,36039,TAA Kansai,2024-01-25,B,Hybrid,CVT,Hatchback,Blue,2018 Nissan Note e-Power Grade B,11138
+Mazda,CX-5,2017,2200000,12100,65000,40389,USS Saitama,2024-02-01,C,Petrol,AT,SUV,Red,2017 Mazda CX-5 Grade C,16335
+Subaru,Forester,2019,2800000,15400,38000,23612,USS Yokohama,2024-02-05,A,Petrol,CVT,SUV,Black,2019 Subaru Forester Grade A,20790
+Lexus,IS,2020,4500000,24750,25000,15534,USS Tokyo,2024-02-10,S,Hybrid,CVT,Sedan,Pearl White,2020 Lexus IS 300h Grade S,33413

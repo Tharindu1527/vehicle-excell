@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Import Analyzer - Manual Import Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+            height: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            position: relative;
+            height: 400px !important;
+            max-height: 400px !important;
+            overflow: hidden !important;
+        }
+        
+        .chart-container canvas {
+            max-height: 300px !important;
+            width: 100% !important;
+            height: 300px !important;
+            display: block !important;
+            box-sizing: border-box !important;
+            position: relative !important;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px !important;
+            max-height: 300px !important;
+            width: 100%;
+            overflow: hidden !important;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .upload-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-card:hover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+        }
+        
+        .upload-card.dragover {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-excellent { background-color: #d4edda; color: #155724; }
+        .status-good { background-color: #d1ecf1; color: #0c5460; }
+        .status-moderate { background-color: #fff3cd; color: #856404; }
+        .status-poor { background-color: #f8d7da; color: #721c24; }
+        
+        .data-status {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #28a745;
+        }
+        
+        .data-status.no-data {
+            border-left-color: #dc3545;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-zone:hover {
+            border-color: #667eea;
+            background-color: #f8f9fa;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 1rem;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+        
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-4 mb-0">
+                        <i class="fas fa-car me-3"></i>Vehicle Import Analyzer
+                    </h1>
+                    <p class="lead mb-0">
+                        <i class="fas fa-upload me-2"></i>Manual Import Mode - Upload your UK and Japan vehicle data
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-light btn-lg me-2" onclick="window.location.href='/upload'">
+                        <i class="fas fa-upload"></i> Upload Data
+                    </button>
+                    <button class="btn btn-outline-light btn-lg" onclick="exportToExcel()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Indicator -->
+    <div class="refresh-indicator" id="refreshIndicator">
+        Data updated successfully!
+    </div>
+
+    <div class="container-fluid">
+        
+        <!-- Data Status Row -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="data-status" id="dataStatus">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-1">
+                                <i class="fas fa-database me-2"></i>Data Status
+                            </h5>
+                            <p class="mb-0" id="dataStatusText">Checking data status...</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-success" id="runAnalysisBtn" onclick="runAnalysis()" disabled>
+                                <i class="fas fa-play me-2"></i>Run Analysis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Upload Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="upload-card" onclick="document.getElementById('ukFileInput').click()">
+                    <i class="fas fa-flag-gb fa-3x text-primary mb-3"></i>
+                    <h4>Upload UK Vehicle Data</h4>
+                    <p class="text-muted mb-3">CSV or Excel files with Japan auction results</p>
+                    <input type="file" id="japanFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="uploadFile('japan', this.files[0])">
+                    <div class="btn btn-outline-danger">
+                        <i class="fas fa-upload me-2"></i>Choose File
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total Opportunities</div>
+                    <div class="metric-value" id="totalOpportunities">-</div>
+                    <small class="text-muted">Profitable vehicles identified</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Average Profit Margin</div>
+                    <div class="metric-value" id="avgProfitMargin">-</div>
+                    <small class="text-muted">Expected profit percentage</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Best ROI</div>
+                    <div class="metric-value" id="bestROI">-</div>
+                    <small class="text-muted">Highest return on investment</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total Profit Potential</div>
+                    <div class="metric-value" id="totalProfit">-</div>
+                    <small class="text-muted">Combined profit opportunity</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="mb-3">Profitability by Make</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="profitabilityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="mb-3">Risk vs Reward Matrix</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="riskRewardChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Opportunities Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="table-container">
+                    <div class="p-3 border-bottom">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h5 class="mb-0">Top Investment Opportunities</h5>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="input-group" style="max-width: 300px; margin-left: auto;">
+                                    <input type="text" class="form-control" placeholder="Search vehicles..." id="searchInput">
+                                    <button class="btn btn-outline-secondary" onclick="searchVehicles()">Search</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Vehicle</th>
+                                    <th>Score</th>
+                                    <th>Profit Margin</th>
+                                    <th>Expected Profit</th>
+                                    <th>ROI</th>
+                                    <th>Risk Level</th>
+                                    <th>Category</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="opportunitiesTableBody">
+                                <tr>
+                                    <td colspan="9" class="loading">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <div>Upload data to see opportunities...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Trends and Portfolio Optimizer Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5 class="mb-3">Market Trends</h5>
+                    <div class="chart-wrapper">
+                        <canvas id="marketTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">Portfolio Optimizer</h5>
+                    <div class="mb-3">
+                        <label for="budgetInput" class="form-label">Investment Budget (£)</label>
+                        <input type="number" class="form-control" id="budgetInput" value="100000" min="10000" max="1000000">
+                    </div>
+                    <button class="btn btn-primary w-100 mb-3" onclick="optimizePortfolio()">Optimize Portfolio</button>
+                    
+                    <div id="portfolioResults" style="display: none;">
+                        <h6>Optimization Results:</h6>
+                        <div class="small text-muted">
+                            <div>Vehicles: <span id="portfolioVehicles">-</span></div>
+                            <div>Expected ROI: <span id="portfolioROI">-</span></div>
+                            <div>Total Profit: <span id="portfolioProfit">-</span></div>
+                            <div>Budget Used: <span id="portfolioBudgetUsed">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Upload Progress Modal -->
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-upload me-2"></i>Uploading File
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Uploading...</span>
+                        </div>
+                        <p id="uploadStatusText">Processing your file...</p>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Modal -->
+    <div class="modal fade" id="analysisModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chart-line me-2"></i>Running Analysis
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <div class="spinner-border text-success mb-3" role="status">
+                            <span class="visually-hidden">Analyzing...</span>
+                        </div>
+                        <p>Analyzing your vehicle data for profitable opportunities...</p>
+                        <div class="progress">
+                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                                 style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let charts = {};
+        let currentData = {};
+        let uploadModal, analysisModal;
+        
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard loaded - Manual Import Mode');
+            
+            // Initialize modals
+            uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
+            analysisModal = new bootstrap.Modal(document.getElementById('analysisModal'));
+            
+            // Load initial data
+            checkDataStatus();
+            loadDashboardData();
+            
+            // Setup auto-refresh every 2 minutes
+            setInterval(checkDataStatus, 120000);
+        });
+        
+        // Check current data status
+        async function checkDataStatus() {
+            try {
+                const response = await fetch('/api/data-status');
+                const data = await response.json();
+                
+                updateDataStatus(data);
+                
+            } catch (error) {
+                console.error('Error checking data status:', error);
+                updateDataStatus({
+                    uk_records: 0,
+                    japan_records: 0,
+                    analysis_results: 0,
+                    has_uk_data: false,
+                    has_japan_data: false,
+                    has_analysis: false,
+                    can_analyze: false
+                });
+            }
+        }
+        
+        // Update data status display
+        function updateDataStatus(data) {
+            const statusDiv = document.getElementById('dataStatus');
+            const statusText = document.getElementById('dataStatusText');
+            const runAnalysisBtn = document.getElementById('runAnalysisBtn');
+            
+            let statusMessage = `UK Records: ${data.uk_records || 0} | Japan Records: ${data.japan_records || 0} | Analysis Results: ${data.analysis_results || 0}`;
+            
+            if (data.can_analyze) {
+                statusDiv.className = 'data-status';
+                statusMessage += ' - Ready for analysis!';
+                runAnalysisBtn.disabled = false;
+                runAnalysisBtn.className = 'btn btn-success';
+            } else if (data.has_uk_data || data.has_japan_data) {
+                statusDiv.className = 'data-status';
+                statusMessage += ' - Need both UK and Japan data for analysis';
+                runAnalysisBtn.disabled = true;
+                runAnalysisBtn.className = 'btn btn-warning';
+            } else {
+                statusDiv.className = 'data-status no-data';
+                statusMessage = 'No data uploaded. Please upload UK and Japan vehicle data to begin.';
+                runAnalysisBtn.disabled = true;
+                runAnalysisBtn.className = 'btn btn-secondary';
+            }
+            
+            statusText.textContent = statusMessage;
+        }
+        
+        // Upload file function
+        async function uploadFile(dataType, file) {
+            if (!file) {
+                showNotification('Please select a file to upload', 'warning');
+                return;
+            }
+            
+            // Show upload modal
+            uploadModal.show();
+            document.getElementById('uploadStatusText').textContent = `Uploading ${dataType.toUpperCase()} data file...`;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch(`/api/upload/${dataType}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                uploadModal.hide();
+                
+                if (result.success) {
+                    showNotification(`Successfully uploaded ${result.count} ${dataType.toUpperCase()} records!`, 'success');
+                    
+                    // Refresh data status
+                    setTimeout(() => {
+                        checkDataStatus();
+                        loadDashboardData();
+                    }, 1000);
+                } else {
+                    showNotification(`Upload failed: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                uploadModal.hide();
+                console.error('Upload error:', error);
+                showNotification(`Upload failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Run analysis function
+        async function runAnalysis() {
+            try {
+                // Show analysis modal
+                analysisModal.show();
+                
+                const response = await fetch('/api/run-analysis', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                analysisModal.hide();
+                
+                if (result.success) {
+                    showNotification(`Analysis completed! Found ${result.total_opportunities} opportunities.`, 'success');
+                    
+                    // Refresh dashboard data
+                    setTimeout(() => {
+                        checkDataStatus();
+                        loadDashboardData();
+                    }, 1000);
+                } else {
+                    showNotification(`Analysis failed: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                analysisModal.hide();
+                console.error('Analysis error:', error);
+                showNotification(`Analysis failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                await Promise.allSettled([
+                    loadSummary(),
+                    loadTopVehicles(),
+                    loadMarketTrends()
+                ]);
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+        
+        // Load summary data
+        async function loadSummary() {
+            try {
+                const response = await fetch('/api/summary');
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.warn('Summary error:', data.error);
+                    return;
+                }
+                
+                updateSummaryMetrics(data);
+                
+            } catch (error) {
+                console.error('Error loading summary:', error);
+            }
+        }
+        
+        // Update summary metrics
+        function updateSummaryMetrics(data) {
+            try {
+                const analysis = data.market_summary?.analysis || {};
+                
+                document.getElementById('totalOpportunities').textContent = 
+                    analysis.vehicles_analyzed || data.database_stats?.analysis_results || 0;
+                
+                document.getElementById('avgProfitMargin').textContent = 
+                    formatPercent(analysis.avg_profit_margin || 0);
+                
+                document.getElementById('bestROI').textContent = 
+                    formatPercent(analysis.max_profit_margin || 0);
+                
+                document.getElementById('totalProfit').textContent = 
+                    formatCurrency(analysis.total_profit_potential || 0);
+                
+            } catch (error) {
+                console.error('Error updating summary metrics:', error);
+            }
+        }
+        
+        // Load top vehicles
+        async function loadTopVehicles() {
+            try {
+                const response = await fetch('/api/top-vehicles?limit=20');
+                const data = await response.json();
+                
+                updateTopVehiclesTable(data.top_vehicles || []);
+                updateProfitabilityChart(data.top_vehicles || []);
+                updateRiskRewardChart(data.top_vehicles || []);
+                
+            } catch (error) {
+                console.error('Error loading top vehicles:', error);
+            }
+        }
+        
+        // Update vehicles table
+        function updateTopVehiclesTable(vehicles) {
+            const tbody = document.getElementById('opportunitiesTableBody');
+            
+            if (!vehicles || vehicles.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            No opportunities found
+                            <br><small>Upload data and run analysis to see results</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = vehicles.map(vehicle => {
+                return `
+                    <tr>
+                        <td><span class="badge bg-primary">${vehicle.rank || 0}</span></td>
+                        <td>
+                            <strong>${vehicle.make || 'Unknown'} ${vehicle.model || 'Vehicle'}</strong><br>
+                            <small class="text-muted">${vehicle.year || 'Unknown'}</small>
+                        </td>
+                        <td>
+                            <span class="badge ${getScoreBadgeClass(vehicle.final_score || 0)}">${(vehicle.final_score || 0).toFixed(1)}</span><br>
+                            <small class="text-muted">${vehicle.score_grade || 'C'}</small>
+                        </td>
+                        <td><strong>${formatPercent(vehicle.profit_margin || 0)}</strong></td>
+                        <td><strong>${formatCurrency(vehicle.expected_profit || 0)}</strong></td>
+                        <td>${formatPercent(vehicle.roi || 0)}</td>
+                        <td><span class="status-badge ${getRiskBadgeClass(vehicle.risk_level || 'Medium')}">${vehicle.risk_level || 'Medium'}</span></td>
+                        <td><small>${vehicle.investment_category || 'Unknown'}</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewVehicleDetails('${vehicle.make}', '${vehicle.model}')">
+                                Details
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Chart functions (simplified versions of the original)
+        function updateProfitabilityChart(vehicles) {
+            const ctx = document.getElementById('profitabilityChart');
+            if (!ctx || !vehicles || vehicles.length === 0) return;
+            
+            if (charts.profitability) {
+                charts.profitability.destroy();
+            }
+            
+            const makeData = {};
+            vehicles.forEach(vehicle => {
+                const make = vehicle.make || 'Unknown';
+                const margin = vehicle.profit_margin || 0;
+                
+                if (!makeData[make]) {
+                    makeData[make] = { total: 0, count: 0 };
+                }
+                makeData[make].total += margin;
+                makeData[make].count += 1;
+            });
+            
+            const makes = Object.keys(makeData);
+            const avgMargins = makes.map(make => (makeData[make].total / makeData[make].count) * 100);
+            
+            charts.profitability = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: makes,
+                    datasets: [{
+                        label: 'Average Profit Margin (%)',
+                        data: avgMargins,
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: value => value + '%' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateRiskRewardChart(vehicles) {
+            const ctx = document.getElementById('riskRewardChart');
+            if (!ctx || !vehicles || vehicles.length === 0) return;
+            
+            if (charts.riskReward) {
+                charts.riskReward.destroy();
+            }
+            
+            const chartData = vehicles.map(v => ({
+                x: v.risk_score || Math.random() * 10,
+                y: (v.roi || 0) * 100,
+                label: `${v.make || 'Unknown'} ${v.model || 'Vehicle'}`
+            }));
+            
+            charts.riskReward = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Vehicle Opportunities',
+                        data: chartData,
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw;
+                                    return `${point.label} (Risk: ${point.x.toFixed(1)}, ROI: ${point.y.toFixed(1)}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Risk Score' },
+                            beginAtZero: true,
+                            max: 10
+                        },
+                        y: {
+                            title: { display: true, text: 'Return on Investment (%)' },
+                            beginAtZero: true,
+                            ticks: { callback: value => value + '%' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Load market trends
+        async function loadMarketTrends() {
+            try {
+                const response = await fetch('/api/market-trends');
+                const data = await response.json();
+                updateMarketTrendsChart(data);
+            } catch (error) {
+                console.error('Error loading market trends:', error);
+            }
+        }
+        
+        function updateMarketTrendsChart(data) {
+            const ctx = document.getElementById('marketTrendsChart');
+            if (!ctx) return;
+            
+            if (charts.marketTrends) {
+                charts.marketTrends.destroy();
+            }
+            
+            const ukData = data.uk_price_by_make || { x: [], y: [] };
+            const japanData = data.japan_price_by_make || { x: [], y: [] };
+            
+            const allMakes = [...new Set([...(ukData.x || []), ...(japanData.x || [])])].sort();
+            
+            if (allMakes.length === 0) {
+                allMakes.push('Toyota', 'Honda', 'Nissan');
+                ukData.x = allMakes;
+                ukData.y = [18500, 16200, 15800];
+                japanData.x = allMakes;
+                japanData.y = [12000, 10500, 9800];
+            }
+            
+            charts.marketTrends = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: allMakes,
+                    datasets: [{
+                        label: 'Average UK Price',
+                        data: allMakes.map(make => {
+                            const index = ukData.x ? ukData.x.indexOf(make) : -1;
+                            return index >= 0 ? ukData.y[index] : 0;
+                        }),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Average Japan Landed Cost',
+                        data: allMakes.map(make => {
+                            const index = japanData.x ? japanData.x.indexOf(make) : -1;
+                            return index >= 0 ? japanData.y[index] : 0;
+                        }),
+                        backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                        borderColor: 'rgba(118, 75, 162, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': £' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '£' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Portfolio optimization
+        async function optimizePortfolio() {
+            try {
+                const budget = document.getElementById('budgetInput').value;
+                
+                showNotification('Optimizing portfolio...', 'info');
+                
+                const response = await fetch(`/api/portfolio-optimizer?budget=${budget}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                updatePortfolioResults(data);
+                
+            } catch (error) {
+                console.error('Error optimizing portfolio:', error);
+                showNotification('Portfolio optimization failed: ' + error.message, 'error');
+            }
+        }
+        
+        function updatePortfolioResults(data) {
+            const elements = {
+                portfolioVehicles: data.number_of_vehicles || 0,
+                portfolioROI: formatPercent(data.portfolio_roi || 0),
+                portfolioProfit: formatCurrency(data.expected_total_profit || 0),
+                portfolioBudgetUsed: formatCurrency(data.allocated || 0)
+            };
+            
+            Object.entries(elements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                }
+            });
+            
+            document.getElementById('portfolioResults').style.display = 'block';
+        }
+        
+        // Export to Excel
+        async function exportToExcel() {
+            try {
+                showNotification('Preparing export...', 'info');
+                
+                const response = await fetch('/api/export/excel');
+                
+                if (!response.ok) {
+                    throw new Error(`Export failed: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vehicle_analysis_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification('Export completed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error exporting data:', error);
+                showNotification('Export failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Search vehicles (placeholder)
+        function searchVehicles() {
+            showNotification('Search functionality will be implemented with more data', 'info');
+        }
+        
+        // View vehicle details (placeholder)
+        function viewVehicleDetails(make, model) {
+            showNotification(`Detailed analysis for ${make} ${model} would be shown here.`, 'info');
+        }
+        
+        // Helper functions
+        function formatCurrency(value) {
+            if (typeof value !== 'number' || isNaN(value)) return '£0';
+            return '£' + Math.round(value).toLocaleString();
+        }
+        
+        function formatPercent(value) {
+            if (typeof value !== 'number' || isNaN(value)) return '0%';
+            return (value * 100).toFixed(1) + '%';
+        }
+        
+        function getScoreBadgeClass(score) {
+            if (score >= 85) return 'bg-success';
+            if (score >= 75) return 'bg-info';
+            if (score >= 65) return 'bg-warning';
+            return 'bg-secondary';
+        }
+        
+        function getRiskBadgeClass(riskLevel) {
+            switch(riskLevel) {
+                case 'Very Low':
+                case 'Low': return 'status-excellent';
+                case 'Moderate': return 'status-good';
+                case 'High': return 'status-moderate';
+                default: return 'status-poor';
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info'}`;
+            notification.innerHTML = `
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}
+                <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html> with UK vehicle listings</p>
+                    <input type="file" id="ukFileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="uploadFile('uk', this.files[0])">
+                    <div class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Choose File
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="upload-card" onclick="document.getElementById('japanFileInput').click()">
+                    <i class="fas fa-flag-jp fa-3x text-danger mb-3"></i>
+                    <h4>Upload Japan Auction Data</h4>
+                    <p class="text-muted mb-3">CSV or Excel files
