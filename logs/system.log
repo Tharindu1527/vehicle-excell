@@ -14200,3 +14200,71 @@
 2025-06-25 23:26:03,741 - src.dashboard.app - INFO - Column mapping: {'Year': 'year', 'Mileage': 'mileage_km', 'Fuel': 'fuel_type', 'Transmission': 'transmission', 'Color': 'colour'}
 2025-06-25 23:26:03,755 - src.dashboard.app - INFO - Processed Japan data: 0 valid records
 2025-06-25 23:26:03,756 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:26:03] "[31m[1mPOST /api/upload-japan-data HTTP/1.1[0m" 400 -
+2025-06-25 23:39:53,172 - src.database.database_manager - INFO - Database manager initialized with path: database/vehicle_import.db
+2025-06-25 23:39:53,173 - src.data_collectors.manual_data_importer - INFO - Fixed manual data importer initialized
+2025-06-25 23:39:53,173 - src.analysis.profitability_analyzer - INFO - Profitability analyzer initialized
+2025-06-25 23:39:53,173 - src.analysis.scoring_engine - INFO - Scoring engine initialized
+2025-06-25 23:39:53,174 - __main__ - INFO - Vehicle Import Analyzer initialized (Manual Import Only)
+2025-06-25 23:39:53,174 - __main__ - INFO - Starting Vehicle Import Analyzer (Manual Import Mode)
+2025-06-25 23:39:53,174 - src.database.database_manager - INFO - Initializing database tables
+2025-06-25 23:39:53,175 - src.database.database_manager - INFO - Database initialization completed
+2025-06-25 23:39:53,175 - __main__ - INFO - Starting manual data collection
+2025-06-25 23:39:53,175 - __main__ - INFO - Importing UK market data from files...
+2025-06-25 23:39:53,176 - __main__ - ERROR - Error during data collection: 'ManualDataImporter' object has no attribute 'import_uk_data_batch'
+2025-06-25 23:39:53,179 - src.database.database_manager - INFO - Retrieved 167 UK market records
+2025-06-25 23:39:53,183 - src.database.database_manager - INFO - Retrieved 0 Japan auction records
+2025-06-25 23:39:53,183 - __main__ - INFO - No initial data found - use dashboard to upload files
+2025-06-25 23:39:53,184 - src.analysis.scoring_engine - INFO - Scoring engine initialized
+2025-06-25 23:39:53,189 - __main__ - INFO - Starting dashboard server on http://localhost:5000
+2025-06-25 23:39:53,190 - __main__ - INFO - Dashboard features:
+2025-06-25 23:39:53,190 - __main__ - INFO -   - Upload UK vehicle data (CSV/Excel)
+2025-06-25 23:39:53,190 - __main__ - INFO -   - Upload Japan auction data (CSV/Excel)
+2025-06-25 23:39:53,190 - __main__ - INFO -   - Run profitability analysis
+2025-06-25 23:39:53,191 - __main__ - INFO -   - View opportunity rankings
+2025-06-25 23:39:53,191 - __main__ - INFO -   - Portfolio optimization
+2025-06-25 23:39:53,191 - __main__ - INFO -   - Export results to Excel
+2025-06-25 23:39:54,133 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.143:5000
+2025-06-25 23:39:54,137 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-06-25 23:39:56,731 - src.dashboard.app - INFO - Dashboard page requested
+2025-06-25 23:39:56,739 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:39:56] "GET / HTTP/1.1" 200 -
+2025-06-25 23:39:56,860 - src.dashboard.app - INFO - Data status requested
+2025-06-25 23:39:56,861 - src.dashboard.app - INFO - API summary endpoint called
+2025-06-25 23:39:56,862 - src.dashboard.app - INFO - Top vehicles endpoint called with limit: 20
+2025-06-25 23:39:56,863 - src.dashboard.app - INFO - Market trends endpoint called
+2025-06-25 23:39:56,868 - src.database.database_manager - INFO - Retrieved 0 analysis results
+2025-06-25 23:39:56,868 - src.dashboard.app - INFO - Market summary retrieved: True
+2025-06-25 23:39:56,868 - src.dashboard.app - WARNING - No analysis results available
+2025-06-25 23:39:56,869 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:39:56] "GET /api/top-vehicles?limit=20 HTTP/1.1" 200 -
+2025-06-25 23:39:56,874 - src.database.database_manager - INFO - Retrieved 0 analysis results
+2025-06-25 23:39:56,875 - src.dashboard.app - INFO - Analysis results count: 0
+2025-06-25 23:39:56,878 - src.dashboard.app - INFO - Database stats: {'uk_market_data': 167, 'japan_auction_data': 0, 'government_data': 0, 'analysis_results': 0, 'database_size_mb': 0.17}
+2025-06-25 23:39:56,879 - src.dashboard.app - INFO - Summary prepared with 0 opportunities
+2025-06-25 23:39:56,880 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:39:56] "GET /api/summary HTTP/1.1" 200 -
+2025-06-25 23:39:56,885 - src.database.database_manager - INFO - Retrieved 167 UK market records
+2025-06-25 23:39:56,892 - src.database.database_manager - INFO - Retrieved 167 UK market records
+2025-06-25 23:39:56,897 - src.database.database_manager - INFO - Retrieved 0 Japan auction records
+2025-06-25 23:39:56,901 - src.database.database_manager - INFO - Retrieved 0 Japan auction records
+2025-06-25 23:39:56,906 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:39:56] "GET /api/market-trends HTTP/1.1" 200 -
+2025-06-25 23:39:56,910 - src.database.database_manager - INFO - Retrieved 0 analysis results
+2025-06-25 23:39:56,912 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:39:56] "GET /api/data-status HTTP/1.1" 200 -
+2025-06-25 23:40:02,098 - src.dashboard.app - INFO - Japan data file upload requested
+2025-06-25 23:40:02,100 - src.dashboard.app - INFO - Processing Japan data file: Bmw_1_Series_Used_Cars_for_1.xlsx
+2025-06-25 23:40:02,458 - src.dashboard.app - INFO - File read successfully: 195 rows, 15 columns
+2025-06-25 23:40:02,459 - src.dashboard.app - INFO - Processing Japan file data with columns: ['Car Title', 'Year', 'Engine', 'Mileage', 'Transmission', 'Model Code', 'Fuel', 'Color', 'Steering', 'Drive Type', 'Seats', 'Doors', 'Stock ID', 'Location', 'Price']
+2025-06-25 23:40:02,460 - src.dashboard.app - INFO - Column mapping: {'Year': 'year', 'Mileage': 'mileage_km', 'Fuel': 'fuel_type', 'Transmission': 'transmission', 'Color': 'colour'}
+2025-06-25 23:40:02,476 - src.dashboard.app - INFO - Processed Japan data: 0 valid records
+2025-06-25 23:40:02,477 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:40:02] "[31m[1mPOST /api/upload-japan-data HTTP/1.1[0m" 400 -
+2025-06-25 23:40:13,151 - src.dashboard.app - INFO - UK data file upload requested
+2025-06-25 23:40:13,153 - src.dashboard.app - INFO - Processing UK data file: Bmw_1_Series_Used_Cars_for_1.xlsx
+2025-06-25 23:40:13,237 - src.dashboard.app - INFO - File read successfully: 195 rows, 15 columns
+2025-06-25 23:40:13,238 - src.dashboard.app - INFO - Available columns: ['Car Title', 'Year', 'Engine', 'Mileage', 'Transmission', 'Model Code', 'Fuel', 'Color', 'Steering', 'Drive Type', 'Seats', 'Doors', 'Stock ID', 'Location', 'Price']
+2025-06-25 23:40:13,238 - src.dashboard.app - INFO - Processing UK file data with specific columns
+2025-06-25 23:40:13,238 - src.dashboard.app - INFO - Input columns: ['Car Title', 'Year', 'Engine', 'Mileage', 'Transmission', 'Model Code', 'Fuel', 'Color', 'Steering', 'Drive Type', 'Seats', 'Doors', 'Stock ID', 'Location', 'Price']
+2025-06-25 23:40:13,239 - src.dashboard.app - INFO - Column mapping: {'Car Title': 'title', 'Mileage': 'mileage', 'Location': 'location', 'Price': 'price'}
+2025-06-25 23:40:13,292 - src.dashboard.app - INFO - Processed UK data: 195 valid records
+2025-06-25 23:40:13,293 - src.dashboard.app - INFO - Sample processed record: BMW Series (2018) - £10976.0
+2025-06-25 23:40:13,368 - src.dashboard.app - INFO - UK data upload completed: 195 vehicles
+2025-06-25 23:40:13,368 - werkzeug - INFO - 192.168.1.143 - - [25/Jun/2025 23:40:13] "POST /api/upload-uk-data HTTP/1.1" 200 -
