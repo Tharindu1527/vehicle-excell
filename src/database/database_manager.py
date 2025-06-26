@@ -633,7 +633,7 @@ class DatabaseManager:
             self.logger.error(f"Error storing UK data: {str(e)}")
     
     def store_japan_data(self, japan_data: pd.DataFrame):
-        """PERMANENT store method that handles ALL Japan auction formats"""
+        """FIXED store method that handles ALL Japan auction formats and schema mismatches"""
         if japan_data.empty:
             self.logger.warning("No Japan data to store")
             return
@@ -648,21 +648,28 @@ class DatabaseManager:
                 self.logger.error("❌ No data after universal mapping")
                 return
             
-            # Get expected database columns
-            expected_columns = [
-                'auction_id', 'title', 'make', 'model', 'year', 'mileage_km', 'mileage_miles',
-                'final_price_jpy', 'final_price_gbp', 'auction_house', 'auction_date',
-                'grade', 'grade_score', 'fuel_type', 'transmission', 'body_type', 'colour',
-                'steering', 'drive_type', 'seats', 'doors', 'engine_details',
-                'estimated_import_cost', 'shipping_cost', 'import_duty', 'vat', 'other_costs',
-                'total_landed_cost', 'image_url', 'promo_badges', 'stock_reference', 'source', 'collection_timestamp'
-            ]
+            # Get the ACTUAL database schema by querying the table
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("PRAGMA table_info(japan_auction_data)")
+                table_info = cursor.fetchall()
+                actual_columns = [row[1] for row in table_info]  # column names are in index 1
+                
+            self.logger.info(f"📋 Actual database columns: {actual_columns}")
             
-            # Ensure all expected columns exist
+            # Ensure ALL mapped columns exist in the actual database table
             japan_clean = japan_mapped.copy()
-            for col in expected_columns:
+            
+            # Only keep columns that actually exist in the database
+            valid_columns = [col for col in japan_clean.columns if col in actual_columns]
+            self.logger.info(f"✅ Valid columns for database: {valid_columns}")
+            
+            # Add missing required columns with defaults
+            for col in actual_columns:
                 if col not in japan_clean.columns:
-                    if col == 'auction_id':
+                    if col == 'id':
+                        continue  # Skip auto-increment primary key
+                    elif col == 'auction_id':
                         japan_clean[col] = [f'auto_{i}_{int(datetime.now().timestamp())}' for i in range(len(japan_clean))]
                     elif col in ['final_price_jpy', 'final_price_gbp', 'total_landed_cost']:
                         japan_clean[col] = 0.0
@@ -672,49 +679,239 @@ class DatabaseManager:
                         japan_clean[col] = datetime.now().isoformat()
                     elif col == 'source':
                         japan_clean[col] = 'universal_upload'
+                    elif col == 'created_at':
+                        continue  # Skip timestamp fields managed by database
                     else:
                         japan_clean[col] = None
+                        
+                    self.logger.info(f"➕ Added missing column '{col}' with default value")
             
-            # Select only expected columns
-            japan_clean = japan_clean[expected_columns]
+            # Select only columns that exist in the database (excluding auto-managed ones)
+            final_columns = [col for col in actual_columns if col not in ['id', 'created_at'] and col in japan_clean.columns]
+            japan_final = japan_clean[final_columns].copy()
+            
+            self.logger.info(f"📊 Final columns for insert: {list(japan_final.columns)}")
             
             # Final data type cleaning
             numeric_columns = ['year', 'mileage_km', 'mileage_miles', 'final_price_jpy', 'final_price_gbp',
-                             'grade_score', 'estimated_import_cost', 'shipping_cost', 'import_duty',
-                             'vat', 'other_costs', 'total_landed_cost', 'seats', 'doors']
+                            'grade_score', 'estimated_import_cost', 'shipping_cost', 'import_duty',
+                            'vat', 'other_costs', 'total_landed_cost', 'seats', 'doors']
             
             for col in numeric_columns:
-                if col in japan_clean.columns:
-                    japan_clean[col] = pd.to_numeric(japan_clean[col], errors='coerce')
+                if col in japan_final.columns:
+                    japan_final[col] = pd.to_numeric(japan_final[col], errors='coerce')
             
             # Fill critical missing values
-            japan_clean['final_price_gbp'] = japan_clean['final_price_gbp'].fillna(0)
-            japan_clean['total_landed_cost'] = japan_clean['total_landed_cost'].fillna(
-                japan_clean['final_price_gbp'] * 1.35
-            )
+            if 'final_price_gbp' in japan_final.columns:
+                japan_final['final_price_gbp'] = japan_final['final_price_gbp'].fillna(0)
+            if 'total_landed_cost' in japan_final.columns:
+                japan_final['total_landed_cost'] = japan_final['total_landed_cost'].fillna(
+                    japan_final.get('final_price_gbp', pd.Series([0] * len(japan_final))) * 1.35
+                )
             
-            # Filter valid data
-            valid_rows = japan_clean[
-                (japan_clean['final_price_gbp'] > 0) | 
-                (japan_clean['final_price_jpy'] > 0) |
-                (japan_clean['make'].notna()) |
-                (japan_clean['title'].notna())
+            # Filter valid data - more lenient criteria
+            valid_rows = japan_final[
+                (japan_final.get('final_price_gbp', pd.Series([1] * len(japan_final))) > 0) | 
+                (japan_final.get('final_price_jpy', pd.Series([1] * len(japan_final))) > 0) |
+                (japan_final.get('make', pd.Series(['x'] * len(japan_final))).notna()) |
+                (japan_final.get('title', pd.Series(['x'] * len(japan_final))).notna())
             ]
             
             if valid_rows.empty:
                 self.logger.error("❌ No valid data found after processing")
                 return
             
-            # Store to database
-            with sqlite3.connect(self.db_path) as conn:
-                valid_rows.to_sql('japan_auction_data', conn, if_exists='append', index=False)
+            # Store to database with error handling
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    valid_rows.to_sql('japan_auction_data', conn, if_exists='append', index=False)
+                    
+                self.logger.info(f"✅ Successfully stored {len(valid_rows)} Japan auction records")
                 
-            self.logger.info(f"✅ Successfully stored {len(valid_rows)} Japan auction records")
-            
+            except sqlite3.Error as db_error:
+                self.logger.error(f"❌ Database error during insert: {str(db_error)}")
+                
+                # Try to handle specific schema issues
+                if "has no column named" in str(db_error):
+                    missing_col = str(db_error).split("has no column named ")[1].strip()
+                    self.logger.error(f"🔧 Missing column detected: {missing_col}")
+                    
+                    # Remove the problematic column and retry
+                    if missing_col in valid_rows.columns:
+                        valid_rows_fixed = valid_rows.drop(columns=[missing_col])
+                        self.logger.info(f"🔄 Retrying without column: {missing_col}")
+                        
+                        try:
+                            with sqlite3.connect(self.db_path) as conn:
+                                valid_rows_fixed.to_sql('japan_auction_data', conn, if_exists='append', index=False)
+                            self.logger.info(f"✅ Successfully stored {len(valid_rows_fixed)} Japan records (after fixing schema)")
+                        except Exception as retry_error:
+                            self.logger.error(f"❌ Retry also failed: {str(retry_error)}")
+                            raise
+                else:
+                    raise
+                
         except Exception as e:
             self.logger.error(f"❌ Error storing Japan data: {str(e)}")
             import traceback
             self.logger.error(f"Traceback: {traceback.format_exc()}")
+
+
+    def initialize_database(self):
+        """Initialize database with FIXED schema that matches the code"""
+        self.logger.info("Initializing database tables with FIXED schema")
+        
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # UK market data table (unchanged)
+                cursor.execute('''
+                CREATE TABLE IF NOT EXISTS uk_market_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_id TEXT UNIQUE,
+                    title TEXT,
+                    make TEXT,
+                    model TEXT,
+                    year INTEGER,
+                    price REAL,
+                    currency TEXT,
+                    mileage REAL,
+                    fuel_type TEXT,
+                    transmission TEXT,
+                    body_type TEXT,
+                    condition TEXT,
+                    url TEXT,
+                    image_url TEXT,
+                    seller TEXT,
+                    location TEXT,
+                    shipping_cost REAL,
+                    age INTEGER,
+                    source TEXT,
+                    collection_timestamp TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                ''')
+                
+                # FIXED Japan auction data table - Remove stock_reference column
+                cursor.execute('''
+                CREATE TABLE IF NOT EXISTS japan_auction_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    auction_id TEXT UNIQUE,
+                    title TEXT,
+                    make TEXT,
+                    model TEXT,
+                    year INTEGER,
+                    mileage_km REAL,
+                    mileage_miles REAL,
+                    final_price_jpy REAL,
+                    final_price_gbp REAL,
+                    auction_house TEXT,
+                    auction_date TEXT,
+                    grade TEXT,
+                    grade_score REAL,
+                    fuel_type TEXT,
+                    transmission TEXT,
+                    body_type TEXT,
+                    colour TEXT,
+                    steering TEXT,
+                    drive_type TEXT,
+                    seats INTEGER,
+                    doors INTEGER,
+                    engine_details TEXT,
+                    estimated_import_cost REAL,
+                    shipping_cost REAL,
+                    import_duty REAL,
+                    vat REAL,
+                    other_costs REAL,
+                    total_landed_cost REAL,
+                    image_url TEXT,
+                    promo_badges TEXT,
+                    source TEXT,
+                    collection_timestamp TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                ''')
+                
+                # Government data table (unchanged)
+                cursor.execute('''
+                CREATE TABLE IF NOT EXISTS government_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    data_type TEXT,
+                    data_content TEXT,
+                    collection_timestamp TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                ''')
+                
+                # Analysis results table (unchanged)
+                cursor.execute('''
+                CREATE TABLE IF NOT EXISTS analysis_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    make TEXT,
+                    model TEXT,
+                    year INTEGER,
+                    year_range TEXT,
+                    uk_sample_size INTEGER,
+                    japan_sample_size INTEGER,
+                    match_type TEXT,
+                    uk_avg_price REAL,
+                    uk_median_price REAL,
+                    uk_min_price REAL,
+                    uk_max_price REAL,
+                    uk_price_std REAL,
+                    uk_avg_mileage REAL,
+                    uk_median_mileage REAL,
+                    uk_listings_count INTEGER,
+                    japan_avg_auction_price REAL,
+                    japan_median_auction_price REAL,
+                    japan_min_auction_price REAL,
+                    japan_max_auction_price REAL,
+                    japan_avg_import_cost REAL,
+                    japan_avg_total_cost REAL,
+                    japan_median_total_cost REAL,
+                    japan_avg_mileage REAL,
+                    japan_avg_grade REAL,
+                    japan_auctions_count INTEGER,
+                    gross_profit REAL,
+                    profit_margin REAL,
+                    profit_margin_conservative REAL,
+                    roi REAL,
+                    price_volatility_uk REAL,
+                    risk_score REAL,
+                    market_share REAL,
+                    listings_density INTEGER,
+                    price_trend TEXT,
+                    demand_score REAL,
+                    avg_days_listed REAL,
+                    profitability_score REAL,
+                    market_demand_score REAL,
+                    risk_assessment_score REAL,
+                    liquidity_score REAL,
+                    market_trends_score REAL,
+                    final_score REAL,
+                    final_score_percentile REAL,
+                    score_grade TEXT,
+                    investment_category TEXT,
+                    recommendation TEXT,
+                    overall_score REAL,
+                    analysis_timestamp TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                ''')
+                
+                # Create indexes for better performance
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_uk_make_model_year ON uk_market_data(make, model, year)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_japan_make_model_year ON japan_auction_data(make, model, year)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_analysis_score ON analysis_results(final_score DESC)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_collection_timestamp ON uk_market_data(collection_timestamp)')
+                
+                conn.commit()
+                self.logger.info("✅ Database initialization completed with FIXED schema")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing database: {str(e)}")
+            raise
     
     def store_analysis_results(self, profitability_results: pd.DataFrame, scores: pd.DataFrame):
         """Store analysis results"""
